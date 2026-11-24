@@ -1,0 +1,7 @@
+## Linux / macOS
+RSCRIPT = "$(R_HOME)/bin/Rscript"
+## As recommended in "Writing R Extensions" (Using cmake).
+CMAKE = $(shell command -v cmake 2>/dev/null || echo /Applications/CMake.app/Contents/bin/cmake)
+OB_CMAKE_GENERATOR = -G "Unix Makefiles"
+
+include Makevars.common

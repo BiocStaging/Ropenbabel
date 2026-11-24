@@ -1,0 +1,3 @@
+src/ob-build*/
+src/*.o
+src/*.so

@@ -1,0 +1,4 @@
+^tools$
+^src/ob-build
+^\.github$
+^\.gitignore$

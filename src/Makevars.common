@@ -1,0 +1,89 @@
+## Shared by Makevars (Linux/macOS) and Makevars.win.
+## Builds the vendored Open Babel with cmake as a static library and
+## installs headers, libs and data into the installed package.
+## Requires GNU make.
+
+OB_VERSION   = 3.2.1
+OB_SRC_DIR   = openbabel-$(OB_VERSION)
+OB_BUILD_DIR = ob-build$(R_ARCH)
+OB_PREFIX    = $(R_PACKAGE_DIR)/openbabel$(R_ARCH)
+OB_JOBS      ?= 2
+
+EIGEN_INC = $(shell $(RSCRIPT) -e "cat(system.file('include', package='RcppEigen'))")
+
+## ---- Cairo (optional; enables PNG output via png2format) ----------------
+## Found with pkg-config. Set OB_DISABLE_CAIRO=ON in the environment to build
+## without it. Makevars.win sets OB_CAIRO_PKGCONFIG_OPTS = --static.
+## Flags are passed straight to cmake, bypassing Open Babel's FindCairo
+## (which prefers libcairo.a in static builds and then fails to link it).
+OB_PKG_CONFIG    ?= pkg-config
+OB_DISABLE_CAIRO ?= OFF
+ifneq ($(OB_DISABLE_CAIRO),ON)
+OB_CAIRO_INC  := $(shell $(OB_PKG_CONFIG) --cflags-only-I cairo 2>/dev/null)
+OB_CAIRO_LIBS := $(shell $(OB_PKG_CONFIG) --libs $(OB_CAIRO_PKGCONFIG_OPTS) cairo 2>/dev/null)
+endif
+ob_empty :=
+ob_space := $(ob_empty) $(ob_empty)
+ob_cmake_list = $(subst $(ob_space),;,$(strip $(1)))
+ifneq ($(strip $(OB_CAIRO_LIBS)),)
+OB_CAIRO_CMAKE = -DCMAKE_DISABLE_FIND_PACKAGE_Cairo=OFF \
+	-DCAIRO_INCLUDE_DIRS="$(call ob_cmake_list,$(patsubst -I%,%,$(OB_CAIRO_INC)))" \
+	-DCAIRO_LIBRARIES="$(call ob_cmake_list,$(OB_CAIRO_LIBS))"
+else
+OB_CAIRO_CMAKE = -DCMAKE_DISABLE_FIND_PACKAGE_Cairo=ON
+endif
+## Extra link flags recorded at build time for client packages (pkgconfig()).
+OB_EXTRA_LIBS_FILE = $(OB_PREFIX)/lib/extra-libs.txt
+
+## Everything that would trigger a download, or pull in an optional
+## system library we can't promise downstream, is switched off.
+OB_CMAKE_FLAGS = \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_INSTALL_PREFIX="$(OB_PREFIX)" \
+	-DCMAKE_INSTALL_LIBDIR=lib \
+	-DCMAKE_C_COMPILER="$(firstword $(CC))" \
+	-DCMAKE_CXX_COMPILER="$(firstword $(CXX))" \
+	-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+	-DBUILD_SHARED=OFF \
+	-DENABLE_TESTS=OFF \
+	-DBUILD_GUI=OFF \
+	-DWITH_MAEPARSER=OFF \
+	-DWITH_COORDGEN=OFF \
+	-DWITH_JSON=OFF \
+	-DWITH_INCHI=ON \
+	-DWITH_STATIC_INCHI=ON \
+	-DOPTIMIZE_NATIVE=OFF \
+	-DENABLE_OPENMP=OFF \
+	-DCMAKE_DISABLE_FIND_PACKAGE_LibXml2=ON \
+	-DCMAKE_DISABLE_FIND_PACKAGE_Boost=ON \
+	-DCMAKE_DISABLE_FIND_PACKAGE_wxWidgets=ON \
+	$(OB_CAIRO_CMAKE) \
+	-DEIGEN3_INCLUDE_DIR="$(EIGEN_INC)"
+
+## Flags for this package's own tiny shim (R_init_Ropenbabel.cpp).
+## Keep in sync with pkgconfig() in R/zzz.R.
+PKG_CPPFLAGS = -I"$(OB_PREFIX)/include/openbabel3"
+PKG_LIBS     = "$(OB_PREFIX)/lib/libopenbabel.a" "$(OB_PREFIX)/lib/libinchi.a" \
+               $(OB_CAIRO_LIBS) -lz
+
+.PHONY: all openbabel clean
+
+all: $(SHLIB)
+
+## The shim can only compile once headers are installed.
+$(OBJECTS): openbabel
+
+openbabel:
+	mkdir -p "$(OB_BUILD_DIR)"
+	cd "$(OB_BUILD_DIR)" && "$(CMAKE)" $(OB_CMAKE_GENERATOR) $(OB_CMAKE_FLAGS) "../$(OB_SRC_DIR)"
+	"$(CMAKE)" --build "$(OB_BUILD_DIR)" --target install -j $(OB_JOBS)
+	## R passes its CXXFLAGS (usually with -g) through to cmake; without
+	## stripping, libopenbabel.a carries ~400 MB of debug info.
+	## STRIP_STATIC_LIB comes from R's Makeconf (empty on some platforms).
+	if test -n "$(STRIP_STATIC_LIB)"; then \
+	  for f in "$(OB_PREFIX)"/lib/*.a; do $(STRIP_STATIC_LIB) "$$f"; done; \
+	fi
+	echo "$(OB_CAIRO_LIBS)" > "$(OB_EXTRA_LIBS_FILE)"
+
+clean:
+	rm -rf "$(OB_BUILD_DIR)" $(OBJECTS) $(SHLIB)

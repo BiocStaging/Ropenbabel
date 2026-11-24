@@ -1,0 +1,41 @@
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -211,6 +211,14 @@
+     set(openbabel_srcs ${openbabel_srcs} formats/getinchi.cpp ops/unique.cpp)
+     set(libs ${libs} ${INCHI_LIBRARY})
+   endif(WITH_STATIC_INCHI)
++
++  # Ropenbabel: upstream only builds png2format (Cairo) as a shared plugin.
++  if(CAIRO_FOUND)
++    add_definitions(-DHAVE_STATIC_CAIRO)
++    include_directories(${CAIRO_INCLUDE_DIRS})
++    set(openbabel_srcs ${openbabel_srcs} formats/png2format.cpp depict/cairopainter.cpp)
++    set(libs ${libs} ${CAIRO_LIBRARIES})
++  endif(CAIRO_FOUND)
+ endif(BUILD_SHARED)
+ 
+ set(openbabel_library_srcs
+--- a/include/openbabel/plugin.h
++++ b/include/openbabel/plugin.h
+@@ -503,6 +503,9 @@
+ #ifdef HAVE_STATIC_INCHI
+   OB_STATIC_PLUGIN(InChIFormat, theInChIFormat)
+ #endif
++#ifdef HAVE_STATIC_CAIRO
++  OB_STATIC_PLUGIN(PNG2Format, thePNG2Format)
++#endif
+ #ifdef HAVE_REGEX_H
+   OB_STATIC_PLUGIN(GAMESSUKInputFormat, theGAMESSUKInputFormat)
+   OB_STATIC_PLUGIN(GAMESSUKOutputFormat, theGAMESSUKOutputFormat)
+--- a/src/plugin.cpp
++++ b/src/plugin.cpp
+@@ -355,6 +355,9 @@
+ #ifdef HAVE_STATIC_INCHI
+   plugin_ids.push_back(reinterpret_cast<OBPlugin*>(&theInChIFormat)->GetID());
+ #endif
++#ifdef HAVE_STATIC_CAIRO
++  plugin_ids.push_back(reinterpret_cast<OBPlugin*>(&thePNG2Format)->GetID());
++#endif
+ #ifdef HAVE_RPC_XDR_H
+   plugin_ids.push_back(reinterpret_cast<OBPlugin*>(&theXTCFormat)->GetID());
+ #endif

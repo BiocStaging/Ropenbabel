@@ -1,0 +1,10 @@
+## Windows (Rtools)
+RSCRIPT = "$(R_HOME)/bin$(R_ARCH_BIN)/Rscript.exe"
+## Rtools 4.3+ ships cmake; GitHub's Windows runners also have one on PATH.
+CMAKE = cmake
+## If cmake complains about sh.exe on PATH, try -G "MSYS Makefiles".
+OB_CMAKE_GENERATOR = -G "Unix Makefiles"
+## Rtools only has static Cairo, so pull in all its dependencies.
+OB_CAIRO_PKGCONFIG_OPTS = --static
+
+include Makevars.common

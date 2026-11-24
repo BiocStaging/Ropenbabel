@@ -1,0 +1,25 @@
+Package: Ropenbabel
+Title: Open Babel cheminformatics C++ library as an R package
+Description: Provides version 3.2.1 of the Open Babel C++ library,
+    built as a static library, together with its headers and data
+    files. Intended for developers of other R packages (such as
+    ChemmineOB) who want to link against Open Babel without requiring
+    a system installation. Use Ropenbabel::pkgconfig() in Makevars.
+Version: 0.99.0
+License: GPL-2
+Copyright: Files in src/openbabel-* are copyright the Open Babel
+    authors; see src/openbabel-*/COPYING. All other files copyright
+    the Ropenbabel authors.
+Authors@R: c(
+    person("Kevin", "Horan", role = c("aut", "cre"),
+        email = "khoran@cs.ucr.edu"),
+    person("Thomas", "Girke", role = "aut"),
+    person("Open Babel authors", role = "cph"))
+Imports: tools
+LinkingTo: RcppEigen
+Suggests: testthat
+SystemRequirements: cmake (>= 3.12), GNU make, C++17, cairo (optional,
+    for PNG output), pkg-config (optional)
+biocViews: Cheminformatics, Infrastructure
+URL: https://github.com/girke-lab/Ropenbabel
+BugReports: https://github.com/girke-lab/Ropenbabel/issues

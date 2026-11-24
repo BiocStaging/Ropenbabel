@@ -1,0 +1,16 @@
+# Test the build on R-universe's Linux, Windows and macOS runners, as
+# Bioconductor does. See
+# https://docs.r-universe.dev/bioconductor/#testing-the-build-in-your-own-ci
+name: Test R-universe
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: R-universe testing
+    uses: r-universe-org/workflows/.github/workflows/build.yml@v3
+    with:
+      universe: bioc
+      organization: bioconductor
