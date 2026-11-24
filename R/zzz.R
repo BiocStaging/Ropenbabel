@@ -21,13 +21,14 @@ pkgconfig <- function(opt = c("PKG_LIBS", "PKG_CPPFLAGS")) {
         ## Order matters for static linking: openbabel before its deps.
         libs <- file.path(libdir, c("libopenbabel.a", "libinchi.a"))
         libs <- libs[file.exists(libs)]
-        ## Link flags for optional dependencies (Cairo) found at build time.
+        ## Libraries linked after these (Cairo, zlib), recorded at build
+        ## time by src/Makevars.common.
         extraFile <- file.path(libdir, "extra-libs.txt")
-        extra <- character()
+        extra <- "-lz"
         if (file.exists(extraFile))
             extra <- trimws(readLines(extraFile, warn = FALSE))
         extra <- extra[nzchar(extra)]
-        paste(c(sprintf("'%s'", libs), extra, "-lz"), collapse = " ")
+        paste(c(sprintf("'%s'", libs), extra), collapse = " ")
     }
     ## Printed, not returned: this is read by $(shell ...) in Makevars.
     cat(config)

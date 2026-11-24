@@ -1,0 +1,11 @@
+--- a/src/formats/libinchi/inchi_dll.c
++++ b/src/formats/libinchi/inchi_dll.c
+@@ -3663,7 +3663,7 @@
+ }
+ #endif
+ 
+-#if( defined(__GNUC__) && __GNUC__ >= 3 && defined(__MINGW32__) && defined(_WIN32) )
++#if( defined(__GNUC__) && __GNUC__ >= 3 && defined(__MINGW32__) && defined(_WIN32) && defined(BUILD_LINK_AS_DLL) )
+ #include <windows.h>
+ /*********************************************************/
+ /*   Pacal calling conventions export from Win32 dll     */

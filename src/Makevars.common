@@ -18,26 +18,28 @@ EIGEN_INC = $(shell $(RSCRIPT) -e "cat(system.file('include', package='RcppEigen
 ## without it. Makevars.win sets OB_CAIRO_PKGCONFIG_OPTS = --static.
 ## Flags are passed straight to cmake, bypassing Open Babel's FindCairo
 ## (which prefers libcairo.a in static builds and then fails to link it).
+##
+## R reads this file before Makeconf, so $(CC) is not yet set here: anything
+## that depends on it must be a recursively expanded (=) variable.
 OB_PKG_CONFIG    ?= pkg-config
 OB_DISABLE_CAIRO ?= OFF
-## webR/emscripten: Cairo's pkg-config flags clash with emscripten's zlib.
-ifneq ($(findstring emcc,$(CC)),)
-OB_DISABLE_CAIRO = ON
-endif
-ifneq ($(OB_DISABLE_CAIRO),ON)
-OB_CAIRO_INC  := $(shell $(OB_PKG_CONFIG) --cflags-only-I cairo 2>/dev/null)
-OB_CAIRO_LIBS := $(shell $(OB_PKG_CONFIG) --libs $(OB_CAIRO_PKGCONFIG_OPTS) cairo 2>/dev/null)
-endif
+## webR/emscripten links with --whole-archive and its own zlib port, so an
+## extra -lz (and Cairo's zlib) gives duplicate symbols there.
+OB_IS_WASM     = $(findstring emcc,$(CC))
+OB_WANT_CAIRO  = $(if $(OB_IS_WASM),,$(filter-out ON,$(OB_DISABLE_CAIRO)))
+OB_CAIRO_INC   = $(if $(OB_WANT_CAIRO),$(shell $(OB_PKG_CONFIG) --cflags-only-I cairo 2>/dev/null))
+OB_CAIRO_LIBS  = $(if $(OB_WANT_CAIRO),$(shell $(OB_PKG_CONFIG) --libs $(OB_CAIRO_PKGCONFIG_OPTS) cairo 2>/dev/null))
+OB_ZLIB        = $(if $(OB_IS_WASM),,-lz)
 ob_empty :=
 ob_space := $(ob_empty) $(ob_empty)
 ob_cmake_list = $(subst $(ob_space),;,$(strip $(1)))
-ifneq ($(strip $(OB_CAIRO_LIBS)),)
-OB_CAIRO_CMAKE = -DCMAKE_DISABLE_FIND_PACKAGE_Cairo=OFF \
+OB_CAIRO_CMAKE = $(if $(strip $(OB_CAIRO_LIBS)),\
+	-DCMAKE_DISABLE_FIND_PACKAGE_Cairo=OFF \
 	-DCAIRO_INCLUDE_DIRS="$(call ob_cmake_list,$(patsubst -I%,%,$(OB_CAIRO_INC)))" \
-	-DCAIRO_LIBRARIES="$(call ob_cmake_list,$(OB_CAIRO_LIBS))"
-else
-OB_CAIRO_CMAKE = -DCMAKE_DISABLE_FIND_PACKAGE_Cairo=ON
-endif
+	-DCAIRO_LIBRARIES="$(call ob_cmake_list,$(OB_CAIRO_LIBS))",\
+	-DCMAKE_DISABLE_FIND_PACKAGE_Cairo=ON)
+## Everything linked after libopenbabel.a and libinchi.a.
+OB_EXTRA_LIBS  = $(OB_CAIRO_LIBS) $(OB_ZLIB)
 ## Extra link flags recorded at build time for client packages (pkgconfig()).
 OB_EXTRA_LIBS_FILE = $(OB_PREFIX)/lib/extra-libs.txt
 
@@ -73,7 +75,7 @@ OB_CMAKE_FLAGS = \
 ## Keep in sync with pkgconfig() in R/zzz.R.
 PKG_CPPFLAGS = -I"$(OB_PREFIX)/include/openbabel3"
 PKG_LIBS     = "$(OB_PREFIX)/lib/libopenbabel.a" "$(OB_PREFIX)/lib/libinchi.a" \
-               $(OB_CAIRO_LIBS) -lz
+               $(OB_EXTRA_LIBS)
 
 .PHONY: all openbabel clean
 
@@ -92,7 +94,7 @@ openbabel:
 	if test -n "$(STRIP_STATIC_LIB)"; then \
 	  for f in "$(OB_PREFIX)"/lib/*.a; do $(STRIP_STATIC_LIB) "$$f"; done; \
 	fi
-	echo "$(OB_CAIRO_LIBS)" > "$(OB_EXTRA_LIBS_FILE)"
+	echo "$(strip $(OB_EXTRA_LIBS))" > "$(OB_EXTRA_LIBS_FILE)"
 
 clean:
 	rm -rf "$(OB_BUILD_DIR)" $(OBJECTS) $(SHLIB)

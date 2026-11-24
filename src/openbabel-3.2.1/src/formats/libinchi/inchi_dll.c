@@ -3663,7 +3663,7 @@ int cdecl_CheckINCHI( const char *szINCHI, const int strict )
 }
 #endif
 
-#if( defined(__GNUC__) && __GNUC__ >= 3 && defined(__MINGW32__) && defined(_WIN32) )
+#if( defined(__GNUC__) && __GNUC__ >= 3 && defined(__MINGW32__) && defined(_WIN32) && defined(BUILD_LINK_AS_DLL) )
 #include <windows.h>
 /*********************************************************/
 /*   Pacal calling conventions export from Win32 dll     */
