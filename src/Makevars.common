@@ -43,6 +43,9 @@ OB_EXTRA_LIBS  = $(OB_CAIRO_LIBS) $(OB_ZLIB)
 ## Extra link flags recorded at build time for client packages (pkgconfig()).
 OB_EXTRA_LIBS_FILE = $(OB_PREFIX)/lib/extra-libs.txt
 
+## ZLIB_LIBRARY: static builds make Open Babel search only for .a files, and
+## macOS has no libz.a, so zlib (and with it the png and gzip formats) was
+## silently dropped there. We always link -lz, so name it explicitly.
 ## Everything that would trigger a download, or pull in an optional
 ## system library we can't promise downstream, is switched off.
 OB_CMAKE_FLAGS = \
@@ -66,6 +69,7 @@ OB_CMAKE_FLAGS = \
 	-DOPTIMIZE_NATIVE=OFF \
 	-DENABLE_OPENMP=OFF \
 	-DCMAKE_DISABLE_FIND_PACKAGE_LibXml2=ON \
+	-DZLIB_LIBRARY:STRING=z \
 	-DCMAKE_DISABLE_FIND_PACKAGE_Boost=ON \
 	-DCMAKE_DISABLE_FIND_PACKAGE_wxWidgets=ON \
 	$(OB_CAIRO_CMAKE) \
