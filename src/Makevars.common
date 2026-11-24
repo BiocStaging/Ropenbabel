@@ -30,6 +30,9 @@ OB_WANT_CAIRO  = $(if $(OB_IS_WASM),,$(filter-out ON,$(OB_DISABLE_CAIRO)))
 OB_CAIRO_INC   = $(if $(OB_WANT_CAIRO),$(shell $(OB_PKG_CONFIG) --cflags-only-I cairo 2>/dev/null))
 OB_CAIRO_LIBS  = $(if $(OB_WANT_CAIRO),$(shell $(OB_PKG_CONFIG) --libs $(OB_CAIRO_PKGCONFIG_OPTS) cairo 2>/dev/null))
 OB_ZLIB        = $(if $(OB_IS_WASM),,-lz)
+## Not under emscripten: there FindZLIB then picks up the host's
+## /usr/include, which breaks the cross-compile.
+OB_ZLIB_CMAKE  = $(if $(OB_IS_WASM),,-DZLIB_LIBRARY:STRING=z)
 ob_empty :=
 ob_space := $(ob_empty) $(ob_empty)
 ob_cmake_list = $(subst $(ob_space),;,$(strip $(1)))
@@ -69,7 +72,7 @@ OB_CMAKE_FLAGS = \
 	-DOPTIMIZE_NATIVE=OFF \
 	-DENABLE_OPENMP=OFF \
 	-DCMAKE_DISABLE_FIND_PACKAGE_LibXml2=ON \
-	-DZLIB_LIBRARY:STRING=z \
+	$(OB_ZLIB_CMAKE) \
 	-DCMAKE_DISABLE_FIND_PACKAGE_Boost=ON \
 	-DCMAKE_DISABLE_FIND_PACKAGE_wxWidgets=ON \
 	$(OB_CAIRO_CMAKE) \
