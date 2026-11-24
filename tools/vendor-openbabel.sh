@@ -16,6 +16,8 @@ rmdir "$TMP"
 # Drop what we never build, to keep the tarball under Bioconductor's 5 MB.
 # test/ is ~220 MB on its own.
 rm -rf "$DEST"/test "$DEST"/src/GUI "$DEST"/windows-* "$DEST"/.github
+# Hidden files trigger an R CMD check NOTE.
+find "$DEST" -name ".*" -type f -delete
 # The top-level CMakeLists does add_subdirectory() on doc/, scripts/ and
 # tools/ unconditionally, so keep the dirs but stub them out. tools/ holds
 # the obabel executables, which upstream links with -static; that fails

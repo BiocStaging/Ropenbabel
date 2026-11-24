@@ -2,14 +2,14 @@
 ## Must match OB_PREFIX in src/Makevars.common.
 .obPrefix <- function() {
     ## R_ARCH is "/x64" on Windows and normally "" elsewhere.
-    sub <- if (nzchar(.Platform$r_arch)) file.path("openbabel", .Platform$r_arch) else "openbabel"
+    sub <- "openbabel"
+    if (nzchar(.Platform$r_arch))
+        sub <- file.path(sub, .Platform$r_arch)
     system.file(sub, package = "Ropenbabel", mustWork = TRUE)
 }
 
 ## Compiler / linker flags for packages that link to Open Babel.
-## Use from a client package's src/Makevars(.win), e.g.
-##   PKG_CPPFLAGS = $(shell "$(R_HOME)/bin/Rscript" -e "Ropenbabel::pkgconfig('PKG_CPPFLAGS')")
-##   PKG_LIBS     = $(shell "$(R_HOME)/bin/Rscript" -e "Ropenbabel::pkgconfig('PKG_LIBS')")
+## Use from a client package's src/Makevars(.win); see ?pkgconfig.
 ## Keep in sync with PKG_CPPFLAGS / PKG_LIBS in src/Makevars.common.
 pkgconfig <- function(opt = c("PKG_LIBS", "PKG_CPPFLAGS")) {
     opt <- match.arg(opt)
@@ -22,23 +22,31 @@ pkgconfig <- function(opt = c("PKG_LIBS", "PKG_CPPFLAGS")) {
         libs <- file.path(libdir, c("libopenbabel.a", "libinchi.a"))
         libs <- libs[file.exists(libs)]
         ## Link flags for optional dependencies (Cairo) found at build time.
-        extra <- file.path(libdir, "extra-libs.txt")
-        extra <- if (file.exists(extra)) trimws(readLines(extra, warn = FALSE)) else character()
-        paste(c(sprintf("'%s'", libs), extra[nzchar(extra)], "-lz"), collapse = " ")
+        extraFile <- file.path(libdir, "extra-libs.txt")
+        extra <- character()
+        if (file.exists(extraFile))
+            extra <- trimws(readLines(extraFile, warn = FALSE))
+        extra <- extra[nzchar(extra)]
+        paste(c(sprintf("'%s'", libs), extra, "-lz"), collapse = " ")
     }
+    ## Printed, not returned: this is read by $(shell ...) in Makevars.
     cat(config)
 }
 
 ## Directory holding Open Babel's data files (force fields, SMARTS
-## patterns, ...). Client packages should set BABEL_DATADIR to this.
+## patterns, ...).
 dataDir <- function() {
-    d <- list.dirs(file.path(.obPrefix(), "share", "openbabel"),
-                   recursive = FALSE)
-    if (length(d)) d[[1L]] else file.path(.obPrefix(), "share", "openbabel")
+    base <- file.path(.obPrefix(), "share", "openbabel")
+    d <- list.dirs(base, recursive = FALSE)
+    if (length(d)) d[[1L]] else base
 }
 
 obVersion <- function() .Call(C_Ropenbabel_version)
 
+## Open Babel (here and in every package that links it) looks up its data
+## files through the BABEL_DATADIR environment variable; the compiled-in
+## default points at the temporary build location. Only set it if the user
+## hasn't.
 .onLoad <- function(libname, pkgname) {
     if (!nzchar(Sys.getenv("BABEL_DATADIR")))
         Sys.setenv(BABEL_DATADIR = dataDir())

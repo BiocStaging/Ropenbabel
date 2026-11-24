@@ -15,9 +15,9 @@ Authors@R: c(
         email = "khoran@cs.ucr.edu"),
     person("Thomas", "Girke", role = "aut"),
     person("Open Babel authors", role = "cph"))
-Imports: tools
 LinkingTo: RcppEigen
-Suggests: testthat
+Suggests: knitr, rmarkdown, BiocStyle
+VignetteBuilder: knitr
 SystemRequirements: cmake (>= 3.12), GNU make, C++17, cairo (optional,
     for PNG output), pkg-config (optional)
 biocViews: Cheminformatics, Infrastructure

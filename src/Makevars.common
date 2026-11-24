@@ -5,7 +5,9 @@
 
 OB_VERSION   = 3.2.1
 OB_SRC_DIR   = openbabel-$(OB_VERSION)
-OB_BUILD_DIR = ob-build$(R_ARCH)
+## R_ARCH is "/x64" on Windows; flatten it so the build dir stays one
+## level below src/ and "../$(OB_SRC_DIR)" still points at the source.
+OB_BUILD_DIR = ob-build$(subst /,_,$(R_ARCH))
 OB_PREFIX    = $(R_PACKAGE_DIR)/openbabel$(R_ARCH)
 OB_JOBS      ?= 2
 
@@ -18,6 +20,10 @@ EIGEN_INC = $(shell $(RSCRIPT) -e "cat(system.file('include', package='RcppEigen
 ## (which prefers libcairo.a in static builds and then fails to link it).
 OB_PKG_CONFIG    ?= pkg-config
 OB_DISABLE_CAIRO ?= OFF
+## webR/emscripten: Cairo's pkg-config flags clash with emscripten's zlib.
+ifneq ($(findstring emcc,$(CC)),)
+OB_DISABLE_CAIRO = ON
+endif
 ifneq ($(OB_DISABLE_CAIRO),ON)
 OB_CAIRO_INC  := $(shell $(OB_PKG_CONFIG) --cflags-only-I cairo 2>/dev/null)
 OB_CAIRO_LIBS := $(shell $(OB_PKG_CONFIG) --libs $(OB_CAIRO_PKGCONFIG_OPTS) cairo 2>/dev/null)
@@ -39,8 +45,11 @@ OB_EXTRA_LIBS_FILE = $(OB_PREFIX)/lib/extra-libs.txt
 ## system library we can't promise downstream, is switched off.
 OB_CMAKE_FLAGS = \
 	-DCMAKE_BUILD_TYPE=Release \
+	-DCMAKE_C_FLAGS_RELEASE="-O2 -DNDEBUG -w" \
+	-DCMAKE_CXX_FLAGS_RELEASE="-O2 -DNDEBUG -w" \
 	-DCMAKE_INSTALL_PREFIX="$(OB_PREFIX)" \
 	-DCMAKE_INSTALL_LIBDIR=lib \
+	-DLIB_INSTALL_DIR:PATH=lib \
 	-DCMAKE_C_COMPILER="$(firstword $(CC))" \
 	-DCMAKE_CXX_COMPILER="$(firstword $(CXX))" \
 	-DCMAKE_POSITION_INDEPENDENT_CODE=ON \

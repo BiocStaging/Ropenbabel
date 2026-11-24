@@ -1,0 +1,83 @@
+---
+title: "Linking R packages to Open Babel with Ropenbabel"
+author: "Kevin Horan, Thomas Girke"
+output: BiocStyle::html_document
+vignette: >
+  %\VignetteIndexEntry{Linking R packages to Open Babel with Ropenbabel}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Overview
+
+[Open Babel](https://openbabel.org) is a C++ library for reading, writing
+and converting chemical file formats, computing descriptors and
+fingerprints, and more. `Ropenbabel` bundles the Open Babel sources and
+builds them as a static library when the package is installed, so that
+other R packages can link to Open Babel on Linux, macOS and Windows without
+a system installation. It follows the model of `Rhtslib` and `Rhdf5lib`.
+
+`Ropenbabel` itself has no user-level functionality. End users will
+normally use a client package such as `ChemmineOB`.
+
+```{r}
+library(Ropenbabel)
+obVersion()
+```
+
+# Using Ropenbabel from another package
+
+In the client package's `DESCRIPTION`:
+
+```
+Imports: Ropenbabel
+LinkingTo: Ropenbabel
+SystemRequirements: GNU make
+```
+
+In `src/Makevars` (and `src/Makevars.win`, using `Rscript.exe`):
+
+```
+RSCRIPT = "$(R_HOME)/bin/Rscript"
+PKG_CPPFLAGS = $(shell $(RSCRIPT) -e "Ropenbabel::pkgconfig('PKG_CPPFLAGS')")
+PKG_LIBS     = $(shell $(RSCRIPT) -e "Ropenbabel::pkgconfig('PKG_LIBS')")
+```
+
+`pkgconfig()` gives the include path and the libraries to link:
+
+```{r}
+pkgconfig("PKG_CPPFLAGS")
+pkgconfig("PKG_LIBS")
+```
+
+Then include Open Babel headers as usual, e.g.
+`#include <openbabel/mol.h>`. Because the library is static, all file
+formats and plugins are registered at link time; no plugin directory is
+needed at run time.
+
+# Data files
+
+Open Babel reads force-field parameters, atom typing rules and similar
+data from the directory given by the `BABEL_DATADIR` environment
+variable. `Ropenbabel` sets it to `dataDir()` when it is loaded, unless it
+is already set. A client package that imports `Ropenbabel` gets this
+automatically.
+
+```{r}
+dataDir()
+```
+
+# Build options
+
+* Cairo, if found with `pkg-config` at install time, enables PNG output
+    (Open Babel's `png` format). Set the environment variable
+    `OB_DISABLE_CAIRO=ON` to build without it.
+* `OB_JOBS` sets the number of parallel compile jobs (default 2).
+* Formats that need network downloads at build time (Maestro, JSON) and
+    optional libraries (libxml2, Boost, wxWidgets) are disabled.
+
+# Session info
+
+```{r}
+sessionInfo()
+```
